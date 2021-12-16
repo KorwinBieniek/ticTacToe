@@ -6,17 +6,32 @@
 
 # todo zweryfikować funkcję select_player
 
-
 # TicTacToe by Korwin Bieniek
 import random
-
 # custom exceptions
 from AlreadyTakenSpotError import AlreadyTakenSpotError
 from NegativePlacementError import NegativePlacementError
 
 CROSS_SYMBOL = 'X'
 CIRCLE_SYMBOL = 'O'
-board_size = int(input('Input the size of the board: '))
+
+
+def input_board_size():
+    correct_size = False
+    while not correct_size:
+        try:
+            size_of_board = int(input('Input the size of the board: '))
+            if size_of_board < 1:
+                print('The value has to be bigger than 0')
+                correct_size = False
+            else:
+                correct_size = True
+                return size_of_board
+        except ValueError:
+            print('Please enter a value')
+
+
+board_size = input_board_size()  # the default board size
 
 
 def swap_player(player):
@@ -61,6 +76,13 @@ def print_board(board):
         print(row)
 
 
+def randomize_player():
+    if select_player() == 1:
+        return CROSS_SYMBOL
+    else:
+        return CIRCLE_SYMBOL
+
+
 class TicTacToe:
 
     def __init__(self):
@@ -77,7 +99,7 @@ class TicTacToe:
     def fix_spot(self, row, col, player):
         self.board[row][col] = player
 
-    def check_rows(self, win, player, board_length):
+    def check_rows(self, player, board_length):
         for i in range(board_length):
             win = True
             for j in range(board_length):
@@ -87,7 +109,7 @@ class TicTacToe:
             if win:
                 return win
 
-    def check_columns(self, win, player, board_length):
+    def check_columns(self, player, board_length):
         for i in range(board_length):
             win = True
             for j in range(board_length):
@@ -116,8 +138,8 @@ class TicTacToe:
         return False
 
     def is_win(self, player):
-        if self.check_rows(True, player, len(self.board)) \
-                or self.check_columns(True, player, len(self.board)) \
+        if self.check_rows(player, len(self.board)) \
+                or self.check_columns(player, len(self.board)) \
                 or self.check_diagonals(True, player, len(self.board)):
             return True
         else:
@@ -158,7 +180,7 @@ class TicTacToe:
                 print('Input a positive number')
                 good_placement = False
             except IndexError:
-                print('Input a number between 1 and 3')
+                print(f'Input a number between 1 and {board_size}')
                 good_placement = False
             except ValueError:
                 print('Input two numbers separated by space')
@@ -178,19 +200,13 @@ class TicTacToe:
     #     finally:
     #         file_open.close()
 
-    def randomize_player(self):
-        if select_player() == 1:
-            return CROSS_SYMBOL
-        else:
-            return CIRCLE_SYMBOL
-
     def start(self):
         clear_file = open('replay.txt', 'w')
         self.board = []
         self.create_board()
         self.save_file()  # save empty board
 
-        player = self.randomize_player()
+        player = randomize_player()
 
         while True:
             print(f'Player {player} turn:')
@@ -231,7 +247,8 @@ def menu():
     answer = 't'
     while answer == 't':
         tic_tac_toe.start()
-        menu_message = 'Please enter \'t\' - to start again, \'r\' to see the replay of the last game or \'q\' - to quit the game: '
+        menu_message = 'Please enter \'t\' - to start again, \'r\' to see the replay of the last game or \'q\' - to ' \
+                       'quit the game: '
         answer = input(menu_message)
 
         while answer != 'q' and answer != 't' and answer != 'r':
@@ -278,7 +295,7 @@ def turns_navigation():
 
 if __name__ == '__main__':
     tic_tac_toe = TicTacToe()
-    menu()
+    # menu()
     tic_tac_toe.verify_functionality([
         ['X', 'O', '-'],
         ['X', 'O', '-'],
@@ -325,4 +342,16 @@ if __name__ == '__main__':
         ['X', 'X', 'O'],
         ['-', 'O', 'X'],
         ['O', 'O', '-']
+    ])
+
+    tic_tac_toe.verify_functionality([
+        ['X', 'X', 'O'],
+        ['-', '-', 'X'],
+        ['O', 'O', '-']
+    ])
+
+    tic_tac_toe.verify_functionality([
+        ['-', 'X', 'O'],
+        ['-', '-', 'X'],
+        ['O', '-', '-']
     ])
