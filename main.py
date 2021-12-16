@@ -16,6 +16,7 @@ from NegativePlacementError import NegativePlacementError
 
 CROSS_SYMBOL = 'X'
 CIRCLE_SYMBOL = 'O'
+board_size = int(input('Input the size of the board: '))
 
 
 def swap_player(player):
@@ -65,12 +66,13 @@ class TicTacToe:
     def __init__(self):
         self.board = []
 
-    def create_board(self, board_size):
+    def create_board(self):
         for i in range(board_size):
             row = []
             for j in range(board_size):
                 row.append('-')
             self.board.append(row)
+        return board_size
 
     def fix_spot(self, row, col, player):
         self.board[row][col] = player
@@ -185,7 +187,7 @@ class TicTacToe:
     def start(self):
         clear_file = open('replay.txt', 'w')
         self.board = []
-        self.create_board(5)
+        self.create_board()
         self.save_file()  # save empty board
 
         player = self.randomize_player()
@@ -241,14 +243,14 @@ def menu():
 
 
 def turns_navigation():
-    turn = 3
+    turn = board_size
     load_file(turn)
     while True:
         turn_choice = input('To see the next turn enter \'d\''
                             ', to see the previous turn enter \'c\','
                             'to quit enter \'q\': ')
         if turn_choice == 'd':
-            turn += 3
+            turn += board_size
             end_of_file = 0
 
             with open('replay.txt', 'r') as file_open:
@@ -262,13 +264,13 @@ def turns_navigation():
                 load_file(turn)
             else:
                 print("This was the last move")
-                turn -= 3
+                turn -= board_size
 
         elif turn_choice == 'c':
-            if turn == 3:
+            if turn == board_size:
                 print("This is the first turn, you can't go back anymore")
             else:
-                turn -= 3
+                turn -= board_size
                 load_file(turn)
         elif turn_choice == 'q':
             exit()
