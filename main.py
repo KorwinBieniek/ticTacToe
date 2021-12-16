@@ -4,21 +4,15 @@
 
 # 3) Eliminacja Magic Values
 
-# todo rozbić funkcje na mniejsze
 # todo zweryfikować funkcję select_player
-# todo zweryfikować funkcję open file
-# todo stworzyć funkcję pozwalającą testować planszę na konkretnych etapach gier -> testy jednostkowe
-# todo usunąć magic numbers
-# todo rozbić funkcje menu(), start() turns_navigation()
-# todo zakaz wpisywania ujemnych wartości aby postawić znak na planszy
-# todo podzielić funkcję check_sign_placement
-# todo dodać elastyczność, aby plansza mogła przyjąć dowolne wymiary
 
 
 # TicTacToe by Korwin Bieniek
 import random
 
-# magic values
+# custom exceptions
+from AlreadyTakenSpotError import AlreadyTakenSpotError
+from NegativePlacementError import NegativePlacementError
 
 CROSS_SYMBOL = 'X'
 CIRCLE_SYMBOL = 'O'
@@ -37,20 +31,26 @@ def select_player():
 
 # dir, file, id
 
-
 # HASŁO DNIA: parsowanie
 
 # "(2+2)*3" ->
 # tekst -----> wyodrębnienie wartości wygodnych w użycia z poziomu pythona
 
-
 # load_file -> można podkręcić values[2:2+3]
 # warto rozważyć podział na drobniejsze akcje (wczytanie, parsowanie
 def load_file(turn_num):
-    a_file = open("replay.txt")  # doc
-    # with open('replay.txt', 'a') as file_open:
-    lines_to_read = [turn_num - 3, turn_num - 2, turn_num - 1]  # indeksy
-    for position, line in enumerate(a_file):
+    replay_file = open("replay.txt")  # doc
+
+    amount_of_lines = 3  # amount of lines we want to print
+    parse_file(turn_num, replay_file, amount_of_lines)
+
+    replay_file.close()
+
+
+def parse_file(turn_num, file, amount_of_lines):
+    lines_to_read = [turn_num - amount_of_lines, turn_num - amount_of_lines + 1,
+                     turn_num - amount_of_lines + 2]  # indeksy
+    for position, line in enumerate(file):
         if position in lines_to_read:
             print(line)
 
@@ -60,28 +60,15 @@ def print_board(board):
         print(row)
 
 
-print_board([
-    ['X', 'O', '_'],
-    ['X', 'O', '_'],
-    ['X', 'O', '_']
-])
-
-print_board([
-    ['X', 'O', '_'],
-    ['_', 'O', 'X'],
-    ['X', 'O', '_']
-])
-
-
 class TicTacToe:
 
     def __init__(self):
         self.board = []
 
-    def create_board(self):
-        for i in range(3):
+    def create_board(self, board_size):
+        for i in range(board_size):
             row = []
-            for j in range(3):
+            for j in range(board_size):
                 row.append('-')
             self.board.append(row)
 
@@ -90,6 +77,7 @@ class TicTacToe:
 
     def check_rows(self, win, player, board_length):
         for i in range(board_length):
+            win = True
             for j in range(board_length):
                 if self.board[i][j] != player:
                     win = False
@@ -99,6 +87,7 @@ class TicTacToe:
 
     def check_columns(self, win, player, board_length):
         for i in range(board_length):
+            win = True
             for j in range(board_length):
                 if self.board[j][i] != player:
                     win = False
@@ -108,6 +97,7 @@ class TicTacToe:
 
     def check_diagonals(self, win, player, board_length):
         for i in range(board_length):
+            win = True
             if self.board[i][i] != player:
                 win = False
                 break
@@ -115,6 +105,7 @@ class TicTacToe:
             return win
 
         for i in range(board_length):
+            win = True
             if self.board[i][board_length - 1 - i] != player:
                 win = False
                 break
@@ -144,16 +135,32 @@ class TicTacToe:
             print()
 
     def check_sign_placement(self, player):
-        row, col = list(
-            map(int, input('Enter row and column numbers to fix spot: ').split()))
-        print()
-        if self.board[row - 1][col - 1] != '-':
-            print("This place is already taken, try another one")
-            return False
-        else:
-            self.fix_spot(row - 1, col - 1, player)
-            self.save_file()
-            return True
+        good_placement = False
+        while not good_placement:
+            try:
+                row, col = list(
+                    map(int, input('Enter row and column numbers to fix spot: ').split()))
+                print()
+                if row < 0 or col < 0:
+                    raise NegativePlacementError
+                elif self.board[row - 1][col - 1] != '-':
+                    raise AlreadyTakenSpotError
+                else:
+                    self.fix_spot(row - 1, col - 1, player)
+                    self.save_file()
+                    good_placement = True
+            except AlreadyTakenSpotError:
+                print('This place is already taken, try another one')
+                good_placement = False
+            except NegativePlacementError:
+                print('Input a positive number')
+                good_placement = False
+            except IndexError:
+                print('Input a number between 1 and 3')
+                good_placement = False
+            except ValueError:
+                print('Input two numbers separated by space')
+                good_placement = False
 
     def save_file(self):
         with open('replay.txt', 'a') as file_open:
@@ -169,53 +176,60 @@ class TicTacToe:
     #     finally:
     #         file_open.close()
 
+    def randomize_player(self):
+        if select_player() == 1:
+            return CROSS_SYMBOL
+        else:
+            return CIRCLE_SYMBOL
+
     def start(self):
-        with open('replay.txt', 'w'):
-            self.board = []
-            self.create_board()
-            self.save_file()  # save empty board
+        clear_file = open('replay.txt', 'w')
+        self.board = []
+        self.create_board(5)
+        self.save_file()  # save empty board
 
-            if select_player() == 1:
-                player = 'X'
-            else:
-                player = 'O'
+        player = self.randomize_player()
 
-            while True:
-                print(f'Player {player} turn:')
+        while True:
+            print(f'Player {player} turn:')
 
-                self.show_board()
-
-                good_placement = False
-                while not good_placement:
-                    try:
-                        good_placement = self.check_sign_placement(player)
-                    except IndexError:
-                        print("Input a number between 1 and 3")
-                        good_placement = False
-                        player = player
-                    except ValueError:
-                        print("Input two numbers separated by space")
-                        good_placement = False
-
-                if self.is_win(player):
-                    print(f'Player {player} won the game!')
-                    break
-
-                if self.is_draw():
-                    print("It's a draw!")
-                    break
-
-                player = swap_player(player)
-
-            print()
             self.show_board()
+
+            self.check_sign_placement(player)
+
+            if self.is_win(player):
+                print(f'Player {player} won the game!')
+                break
+
+            if self.is_draw():
+                print("It's a draw!")
+                break
+
+            player = swap_player(player)
+
+        print()
+        self.show_board()
+        clear_file.close()
+
+    def verify_functionality(self, board):
+
+        self.board = board
+
+        if self.is_draw():
+            print("It's a draw!")
+        elif self.is_win(CROSS_SYMBOL):
+            print(f'Player {CROSS_SYMBOL} won the game!')
+        elif self.is_win(CIRCLE_SYMBOL):
+            print(f'Player {CIRCLE_SYMBOL} won the game!')
+        else:
+            print("Game is still running")
 
 
 def menu():
     answer = 't'
     while answer == 't':
         tic_tac_toe.start()
-        menu_message = 'Please enter \'t\' - to start again, \'q\' - to quit the game or \'r\' to see the replay of the last game: '
+        menu_message = 'Please enter \'t\' - to start again, \'r\' to see the replay of the last game or \'q\' - to quit the game: '
         answer = input(menu_message)
 
         while answer != 'q' and answer != 't' and answer != 'r':
@@ -263,3 +277,50 @@ def turns_navigation():
 if __name__ == '__main__':
     tic_tac_toe = TicTacToe()
     menu()
+    tic_tac_toe.verify_functionality([
+        ['X', 'O', '-'],
+        ['X', 'O', '-'],
+        ['X', 'O', '-']
+    ])
+
+    tic_tac_toe.verify_functionality([
+        ['X', 'O', '-'],
+        ['-', 'O', 'X'],
+        ['X', 'O', '-']
+    ])
+
+    tic_tac_toe.verify_functionality([
+        ['X', '-', 'O'],
+        ['-', '-', 'O'],
+        ['X', '-', 'O']
+    ])
+
+    tic_tac_toe.verify_functionality([
+        ['X', '-', '-'],
+        ['O', 'O', 'O'],
+        ['X', 'O', '-']
+    ])
+
+    tic_tac_toe.verify_functionality([
+        ['X', 'O', '-'],
+        ['-', 'O', 'O'],
+        ['X', 'X', 'X']
+    ])
+
+    tic_tac_toe.verify_functionality([
+        ['X', 'O', '-'],
+        ['-', 'X', 'O'],
+        ['O', 'O', 'X']
+    ])
+
+    tic_tac_toe.verify_functionality([
+        ['X', 'X', 'X'],
+        ['-', 'O', 'X'],
+        ['O', 'O', '-']
+    ])
+
+    tic_tac_toe.verify_functionality([
+        ['X', 'X', 'O'],
+        ['-', 'O', 'X'],
+        ['O', 'O', '-']
+    ])
