@@ -6,12 +6,24 @@
 
 # TicTacToe by Korwin Bieniek
 import random
+
+
 # custom exceptions
-from AlreadyTakenSpotError import AlreadyTakenSpotError
-from NegativePlacementError import NegativePlacementError
+
+
+class AlreadyTakenSpotError(Exception):
+    """Raised when one of the indexes is already taken"""
+    pass
+
+
+class NegativePlacementError(Exception):
+    """Raised when one of the indexes is negative"""
+    pass
+
 
 CROSS_SYMBOL = 'X'
 CIRCLE_SYMBOL = 'O'
+EMPTY_SYMBOL = '-'
 
 
 def input_board_size():
@@ -64,8 +76,18 @@ def _check_lines(lines, board_size):
     pass
 
 
+def _split_lines(text):
+    all_lines = text.split('\n')
+    filled_lines = []
+    for line in all_lines:
+        cleaned_line = line.strip()
+        if cleaned_line:
+            filled_lines.append(cleaned_line)
+    return filled_lines
+
+
 def parse_history(text, size_of_board):
-    lines = text.split('\n')
+    lines = _split_lines(text)
     _check_lines(lines, size_of_board)
     boards = []
     for i in range(0, len(lines), size_of_board):
@@ -96,13 +118,45 @@ def _create_board(size):
     return rows
 
 
+# DODAJMY (TROCHĘ PÓŹNIEJ)
+# save_file(board) # !!!
+
 class Board:
 
     def __init__(self, size):
-        self.board = _create_board(size)  # niedostępne dla innych
+        # _board -> nie wolno odwoływać się wprost z poza tej klasy
+        self._board = _create_board(size)  # niedostępne dla innych
 
-    def fix_spot(self, row, col, player):
-        self.board[row][col] = player
+    def fix_spot(self, row_index, col_index, player):
+        if row_index < 0 or col_index < 0:
+            raise IndexError()
+        elif self._board[row_index][col_index] != EMPTY_SYMBOL:
+            raise AlreadyTakenSpotError()
+        else:
+            self._board[row_index][col_index] = player
+
+    def __str__(self):
+        s = ''
+        for row in self.board:
+            for place in row:
+                s += place
+            s += "\n"
+        return s
+
+    def is_win(self, player):
+        if self._check_rows(player, len(self._board)) \
+                or self._check_columns(player, len(self._board)) \
+                or self._check_diagonals(player, len(self._board)):
+            return True
+        else:
+            return False
+
+    def is_draw(self):
+        for row in self.board:
+            for place in row:
+                if place == '-':
+                    return False
+        return True
 
     def _check_rows(self, player, board_length):
         for i in range(board_length):
@@ -143,40 +197,28 @@ class Board:
             return win
         return False
 
-    def is_win(self, player):
-        if self._check_rows(player, len(self.board)) \
-                or self._check_columns(player, len(self.board)) \
-                or self._check_diagonals(player, len(self.board)):
-            return True
-        else:
-            return False
 
-    def is_draw(self):
-        for row in self.board:
-            for place in row:
-                if place == '-':
-                    return False
-        return True
+#     def verify_functionality(self, board):
 
-    def verify_functionality(self, board):
+#         self.board = board
 
-        self.board = board
-
-        if self.is_draw():
-            print("It's a draw!")
-        elif self.is_win(CROSS_SYMBOL):
-            print(f'Player {CROSS_SYMBOL} won the game!')
-        elif self.is_win(CIRCLE_SYMBOL):
-            print(f'Player {CIRCLE_SYMBOL} won the game!')
-        else:
-            print("Game is still running")
+#         if self.is_draw():
+#             print("It's a draw!")
+#         elif self.is_win(CROSS_SYMBOL):
+#             print(f'Player {CROSS_SYMBOL} won the game!')
+#         elif self.is_win(CIRCLE_SYMBOL):
+#             print(f'Player {CIRCLE_SYMBOL} won the game!')
+#         else:
+#             print("Game is still running")
 
 
 def show_board(board):
-    for row in board.board:
-        for place in row:
-            print(place, end=" ")
-        print()
+    print(board)  # python pod spodem wywoła też str(board)
+
+
+def save_file(board):
+    with open('replay.txt', 'a') as file_open:
+        file_open.write(str(board))
 
 
 def check_sign_placement(player, board):
@@ -185,14 +227,8 @@ def check_sign_placement(player, board):
             row, col = list(
                 map(int, input('Enter row and column numbers to fix spot: ').split()))
             print()
-            if row < 0 or col < 0:
-                raise NegativePlacementError
-            elif board.board[row - 1][col - 1] != '-':
-                raise AlreadyTakenSpotError
-            else:
-                board.fix_spot(row - 1, col - 1, player)
-                save_file(board)
-                break
+            board.fix_spot(row_index=row - 1, col_index=col - 1, player=player)
+            break
         except AlreadyTakenSpotError:
             print('This place is already taken, try another one')
             continue
@@ -205,12 +241,6 @@ def check_sign_placement(player, board):
         except ValueError:
             print('Input two numbers separated by space')
             continue
-
-
-def save_file(board):
-    with open('replay.txt', 'a') as file_open:
-        for item in board.board:
-            file_open.write("%s\n" % item)
 
 
 # TO ROBI WITH+PLIK POD SPODEM:
@@ -252,11 +282,34 @@ def start(board):
     clear_file.close()
 
 
+'''class MenuAction:
+
+    def run(self):
+        pass
+
+
+class StartGame(MenuAction):
+
+    def run(self):
+        print('właśnie uruchamiam grę')
+
+
+# S(O)LID - otwarte na rozszerzenia, zamknięte na modyfikacje / rób program tak, aby dało się do niego włącząć nowe zmiany jako pluginy
+menu = Menu()
+menu.add_option('t', StartGame())
+menu.add_option('r', ReplayGame())
+menu.add_option('q', QuitGame())
+menu.add_option('d', DownloadAddon())
+menu.run()'''
+
+
 def menu(board):
     answer = 't'
-    size = len(board.board)
-    while answer == 't':
 
+    board_size = input_board_size()
+
+    while answer == 't':
+        board = Board(board_size)
         start(board)
         menu_message = 'Please enter \'t\' - to start again, \'r\' to see the replay of the last game or \'q\' - to ' \
                        'quit the game: '
@@ -265,7 +318,7 @@ def menu(board):
         while answer != 'q' and answer != 't' and answer != 'r':
             answer = input(menu_message)
     if answer == 'r':
-        turns_navigation(size)
+        turns_navigation(board_size)
     if answer == 'q':
         exit(0)
 
@@ -310,66 +363,4 @@ def turns_navigation(size):
 
 
 if __name__ == '__main__':
-    board_size = input_board_size()
-    game_board = Board(board_size)
-    menu(game_board)
-
-    game_board.verify_functionality([
-        ['X', 'O', '-'],
-        ['X', 'O', '-'],
-        ['X', 'O', '-']
-    ])
-
-    game_board.verify_functionality([
-        ['X', 'O', '-'],
-        ['-', 'O', 'X'],
-        ['X', 'O', '-']
-    ])
-
-    game_board.verify_functionality([
-        ['X', '-', 'O'],
-        ['-', '-', 'O'],
-        ['X', '-', 'O']
-    ])
-
-    game_board.verify_functionality([
-        ['X', '-', '-'],
-        ['O', 'O', 'O'],
-        ['X', 'O', '-']
-    ])
-
-    game_board.verify_functionality([
-        ['X', 'O', '-'],
-        ['-', 'O', 'O'],
-        ['X', 'X', 'X']
-    ])
-
-    game_board.verify_functionality([
-        ['X', 'O', '-'],
-        ['-', 'X', 'O'],
-        ['O', 'O', 'X']
-    ])
-
-    game_board.verify_functionality([
-        ['X', 'X', 'X'],
-        ['-', 'O', 'X'],
-        ['O', 'O', '-']
-    ])
-
-    game_board.verify_functionality([
-        ['X', 'X', 'O'],
-        ['-', 'O', 'X'],
-        ['O', 'O', '-']
-    ])
-
-    game_board.verify_functionality([
-        ['X', 'X', 'O'],
-        ['-', '-', 'X'],
-        ['O', 'O', '-']
-    ])
-
-    game_board.verify_functionality([
-        ['-', 'X', 'O'],
-        ['-', '-', 'X'],
-        ['O', '-', '-']
-    ])
+    menu()
